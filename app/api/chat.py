@@ -1,13 +1,12 @@
 # app/api/chat.py
 from fastapi import APIRouter, HTTPException
-from typing import List
 import uuid
 from datetime import datetime
 from bson import ObjectId
 
 from app.models import ChatRequest, ChatResponse, Message, Conversation
 from app.database import get_collection
-from app.openrouter_client import generate_response, format_conversation_history
+from app.llm_client import generate_response, format_conversation_history
 
 router = APIRouter()
 
@@ -40,12 +39,12 @@ async def chat_endpoint(request: ChatRequest):
             {"conversation_id": conversation_id}
         ).sort("timestamp", 1))
         
-        # Generate AI response using selected model
+        # Generate AI response using selected model (default: groq)
         formatted_history = format_conversation_history(history_messages)
         ai_response, model_used = await generate_response(
             request.message, 
             formatted_history, 
-            request.model or "qwen"
+            request.model or "groq"
         )
         
         # Save user message
@@ -133,5 +132,71 @@ async def delete_conversation(conversation_id: str):
             raise HTTPException(status_code=404, detail="Conversation not found")
             
         return {"message": "Conversation deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/conversations")
+async def delete_all_conversations():
+    """Delete all conversations and their messages"""
+    try:
+        conversations_collection = get_collection("conversations")
+        messages_collection = get_collection("messages")
+        
+        # Delete all conversations
+        conv_result = conversations_collection.delete_many({})
+        
+        # Delete all messages
+        messages_collection.delete_many({})
+        
+        return {
+            "message": "All conversations deleted successfully",
+            "deleted_count": conv_result.deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/conversations/search/{query}")
+async def search_conversations(query: str):
+    """Search conversations by title or content"""
+    try:
+        conversations_collection = get_collection("conversations")
+        messages_collection = get_collection("messages")
+        
+        # Search in conversation titles
+        title_matches = list(conversations_collection.find(
+            {"title": {"$regex": query, "$options": "i"}}
+        ).sort("updated_at", -1))
+        
+        # Search in message content
+        message_matches = list(messages_collection.find(
+            {"content": {"$regex": query, "$options": "i"}}
+        ))
+        
+        # Get unique conversation IDs from message matches
+        conv_ids_from_messages = list(set([
+            msg["conversation_id"] for msg in message_matches
+        ]))
+        
+        # Get conversations from message matches
+        content_matches = []
+        if conv_ids_from_messages:
+            content_matches = list(conversations_collection.find(
+                {"_id": {"$in": [ObjectId(cid) for cid in conv_ids_from_messages if ObjectId.is_valid(cid)]}}
+            ).sort("updated_at", -1))
+        
+        # Combine and deduplicate results
+        all_conversations = {str(conv["_id"]): conv for conv in title_matches}
+        for conv in content_matches:
+            all_conversations[str(conv["_id"])] = conv
+        
+        # Convert to list and format
+        results = list(all_conversations.values())
+        for conv in results:
+            conv["_id"] = str(conv["_id"])
+        
+        # Sort by updated_at
+        results.sort(key=lambda x: x.get("updated_at", datetime.min), reverse=True)
+        
+        return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,6 +1,6 @@
 # app/models.py
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime
 
 class Message(BaseModel):
@@ -19,7 +19,7 @@ class Conversation(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
-    model: Optional[str] = "qwen/qwen3-coder:free"  # Default model
+    model: Optional[str] = "groq"  # Default to Groq
 
 class ChatResponse(BaseModel):
     response: str
