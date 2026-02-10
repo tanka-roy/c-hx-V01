@@ -5,6 +5,7 @@ class ChatApp {
         this.currentModel = 'groq';  // Default to Groq
         this.conversations = [];
         this.messages = [];
+        this.MESSAGE_COLLAPSE_THRESHOLD = 300; // Characters threshold for collapsing
         
         this.initializeElements();
         this.setupEventListeners();
@@ -83,46 +84,133 @@ class ChatApp {
         // Create a temporary notification
         const notification = document.createElement('div');
         notification.className = 'model-switch-notification';
-        notification.textContent = `Switched to ${modelName}`;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        notification.innerHTML = `
+            <span>Switched to ${modelName}</span>
         `;
         
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => notification.remove(), 300);
-        }, 2000);
+            notification.classList.add('out');
+            setTimeout(() => notification.remove(), 500);
+        }, 2500);
     }
     
-    showMessage(content, role) {
+    /**
+     * Checks if content should be collapsible
+     * @param {string} content - The message content
+     * @returns {boolean}
+     */
+    shouldCollapse(content) {
+        return content.length > this.MESSAGE_COLLAPSE_THRESHOLD;
+    }
+    
+    /**
+     * Creates an expandable message element
+     * @param {string} content - The message content
+     * @param {string} role - 'user' or 'assistant'
+     * @returns {HTMLElement}
+     */
+    createExpandableMessage(content, role) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
         
+        // Create avatar
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = role === 'user' ? 
+            '<i class="ri-user-line"></i>' : 
+            '<i class="ri-cpu-line"></i>';
+        
+        // Create message bubble container
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        
+        // Create content container
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = content;
         
+        // Check if content should be collapsible
+        const isCollapsible = this.shouldCollapse(content);
+        
+        if (isCollapsible) {
+            contentDiv.classList.add('collapsible');
+        }
+        
+        // Process content for code blocks and formatting
+        contentDiv.innerHTML = this.formatMessageContent(content);
+        
+        // Create expand/collapse button if needed
+        if (isCollapsible) {
+            const expandToggle = document.createElement('button');
+            expandToggle.className = 'expand-toggle';
+            expandToggle.innerHTML = `
+                <span>Show more</span>
+                <i class="ri-arrow-down-s-line"></i>
+            `;
+            
+            expandToggle.addEventListener('click', () => {
+                const isExpanded = contentDiv.classList.toggle('expanded');
+                expandToggle.classList.toggle('expanded', isExpanded);
+                expandToggle.innerHTML = isExpanded ? 
+                    '<span>Show less</span><i class="ri-arrow-down-s-line"></i>' :
+                    '<span>Show more</span><i class="ri-arrow-down-s-line"></i>';
+                
+                // Smooth scroll to keep message in view
+                setTimeout(() => {
+                    if (!isExpanded) {
+                        contentDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            });
+            
+            bubble.appendChild(contentDiv);
+            bubble.appendChild(expandToggle);
+        } else {
+            bubble.appendChild(contentDiv);
+        }
+        
+        // Create timestamp
         const timestampDiv = document.createElement('div');
         timestampDiv.className = 'timestamp';
-        timestampDiv.textContent = new Date().toLocaleTimeString();
+        timestampDiv.innerHTML = `
+            <i class="ri-time-line"></i>
+            <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        `;
         
-        messageDiv.appendChild(contentDiv);
-        messageDiv.appendChild(timestampDiv);
-        this.chatMessages.appendChild(messageDiv);
-        this.scrollToBottom();
+        bubble.appendChild(timestampDiv);
+        
+        // Assemble message
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(bubble);
+        
+        return messageDiv;
+    }
+    
+    /**
+     * Formats message content (handles code blocks, line breaks, etc.)
+     * @param {string} content - Raw message content
+     * @returns {string} - Formatted HTML
+     */
+    formatMessageContent(content) {
+        // Escape HTML to prevent XSS
+        let formatted = content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        
+        // Handle code blocks (```code```)
+        formatted = formatted.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+        
+        // Handle inline code (`code`)
+        formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Handle line breaks
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        return formatted;
     }
     
     async handleSubmit(e) {
@@ -177,20 +265,8 @@ class ChatApp {
             welcomeMessage.remove();
         }
         
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role}-message`;
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        contentDiv.textContent = content;
-        
-        const timestampDiv = document.createElement('div');
-        timestampDiv.className = 'timestamp';
-        timestampDiv.textContent = new Date().toLocaleTimeString();
-        
-        messageDiv.appendChild(contentDiv);
-        messageDiv.appendChild(timestampDiv);
-        this.chatMessages.appendChild(messageDiv);
+        const messageElement = this.createExpandableMessage(content, role);
+        this.chatMessages.appendChild(messageElement);
         
         this.scrollToBottom();
     }
@@ -208,15 +284,30 @@ class ChatApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message assistant-message';
         
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = '<i class="ri-cpu-line"></i>';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = 'Thinking<span class="typing-indicator-container"><span class="typing-indicator"></span><span class="typing-indicator"></span><span class="typing-indicator"></span></span>';
+        contentDiv.innerHTML = `
+            Thinking
+            <span class="typing-indicator-container">
+                <span class="typing-indicator"></span>
+                <span class="typing-indicator"></span>
+                <span class="typing-indicator"></span>
+            </span>
+        `;
         
-        messageDiv.appendChild(contentDiv);
+        bubble.appendChild(contentDiv);
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(bubble);
         this.chatMessages.appendChild(messageDiv);
         
         this.scrollToBottom();
-        
         return messageDiv;
     }
     
@@ -224,7 +315,6 @@ class ChatApp {
         try {
             const response = await fetch('/api/conversations');
             const conversations = await response.json();
-            
             this.conversations = conversations;
             this.renderConversations();
         } catch (error) {
@@ -237,51 +327,66 @@ class ChatApp {
         
         if (this.conversations.length === 0) {
             this.conversationsList.innerHTML = `
-                <div class="empty-state">
-                    <p>No conversations yet</p>
+                <div style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.8rem;">
+                    No conversations yet
                 </div>
             `;
             return;
         }
         
         this.conversations.forEach(conv => {
-            const convElement = document.createElement('div');
-            convElement.className = `conversation-item ${conv._id === this.currentConversationId ? 'active' : ''}`;
+            const convDiv = document.createElement('div');
+            convDiv.className = 'conversation-item';
+            if (conv._id === this.currentConversationId) {
+                convDiv.classList.add('active');
+            }
             
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'conversation-title';
-            titleDiv.textContent = conv.title || 'New Conversation';
+            const title = document.createElement('div');
+            title.className = 'conversation-title';
+            title.textContent = conv.title;
             
-            const dateDiv = document.createElement('div');
-            dateDiv.className = 'conversation-date';
-            dateDiv.textContent = new Date(conv.updated_at).toLocaleDateString();
+            const time = document.createElement('div');
+            time.className = 'conversation-time';
+            time.textContent = this.formatDate(conv.updated_at);
             
-            // Add delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'conversation-delete-btn';
             deleteBtn.innerHTML = '<i class="ri-delete-bin-line"></i>';
-            deleteBtn.title = 'Delete conversation';
             deleteBtn.addEventListener('click', (e) => this.deleteConversation(conv._id, e));
             
-            convElement.appendChild(titleDiv);
-            convElement.appendChild(dateDiv);
-            convElement.appendChild(deleteBtn);
+            convDiv.appendChild(title);
+            convDiv.appendChild(time);
+            convDiv.appendChild(deleteBtn);
             
-            convElement.addEventListener('click', () => {
-                this.currentConversationId = conv._id;
-                this.loadConversationMessages();
-                this.renderConversations();
-            });
+            convDiv.addEventListener('click', () => this.loadConversation(conv._id));
             
-            this.conversationsList.appendChild(convElement);
+            this.conversationsList.appendChild(convDiv);
         });
     }
     
-    async loadConversationMessages() {
-        if (!this.currentConversationId) return;
+    formatDate(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         
+        if (days === 0) {
+            return 'Today';
+        } else if (days === 1) {
+            return 'Yesterday';
+        } else if (days < 7) {
+            return `${days} days ago`;
+        } else {
+            return date.toLocaleDateString();
+        }
+    }
+    
+    async loadConversation(conversationId) {
         try {
-            const response = await fetch(`/api/conversations/${this.currentConversationId}/messages`);
+            this.currentConversationId = conversationId;
+            this.renderConversations();
+            
+            const response = await fetch(`/api/conversations/${conversationId}/messages`);
             const messages = await response.json();
             
             this.chatMessages.innerHTML = '';
@@ -473,33 +578,6 @@ class ChatApp {
         });
     }
 }
-
-// Add CSS animations for notifications
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
 
 document.addEventListener('DOMContentLoaded', () => {
     new ChatApp();
