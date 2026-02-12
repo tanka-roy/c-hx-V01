@@ -5,150 +5,208 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHAT HX V-01</title>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="bg-mesh"></div>
-    <div class="grid-overlay"></div>
-    <div class="floating-orbs">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-    </div>
+    <div class="app-shell">
 
-    <div class="aura-canvas">
-        <!-- Left Sidebar Navigation -->
-        <aside class="floating-nav">
-            <div class="nav-logo">
-                <span class="logo-brackets">{}</span>
+        <!-- Left Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Logo -->
+            <div class="sidebar-logo">
+                <div class="logo-mark">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M3.5 10C3.5 6.41015 6.41015 3.5 10 3.5C13.5899 3.5 16.5 6.41015 16.5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M16.5 10C16.5 13.5899 13.5899 16.5 10 16.5C6.41015 16.5 3.5 13.5899 3.5 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="1.5 2.5"/>
+                        <circle cx="10" cy="10" r="2.25" fill="currentColor"/>
+                    </svg>
+                </div>
+                <span class="logo-text">ChatHX</span>
+                <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" title="Collapse sidebar">
+                    <i class="ri-sidebar-fold-line"></i>
+                </button>
             </div>
-            
-            <div class="nav-divider"></div>
-            
-            <nav class="nav-main">
-                <div class="nav-item active" data-label="Groq Llama 3.3" data-model="groq" title="Fast coding & development">
-                    <img src="/static/icons/meta-color.svg" alt="Groq" class="model-avatar">
+
+            <!-- New Chat -->
+            <button class="new-chat-btn" id="new-chat-btn">
+                <i class="ri-add-line"></i>
+                <span>New chat</span>
+            </button>
+
+            <!-- History -->
+            <div class="nav-section history-section">
+                <div class="history-header">
+                    <p class="nav-section-label">History</p>
+                    <div class="history-header-actions">
+                        <button class="icon-btn" id="search-toggle-btn" title="Search conversations">
+                            <i class="ri-search-line"></i>
+                        </button>
+                        <button class="icon-btn danger" id="delete-all-btn" title="Clear all history">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="nav-item" data-label="Claude 3.5 Haiku" data-model="openrouter" title="UI/UX & design expert">
-                    <img src="/static/icons/claude-color.svg" alt="Claude" class="model-avatar">
+
+                <div class="search-container" id="search-container" style="display: none;">
+                    <div class="search-input-wrapper">
+                        <i class="ri-search-line search-icon-small"></i>
+                        <input type="text" id="search-input" placeholder="Search conversations..." autocomplete="off">
+                        <button class="clear-search-btn" id="clear-search-btn" style="display: none;">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="nav-item" data-label="Gemini Pro" data-model="gemini" title="Versatile AI assistant">
-                    <img src="/static/icons/gemini-color.svg" alt="Gemini" class="model-avatar">
+
+                <div class="conversations-list" id="conversations-list">
+                    <!-- Populated by JS -->
                 </div>
-                
-                <div class="nav-item" data-label="StepFun" data-model="stepfun" title="Productivity focused">
-                    <img src="/static/icons/stepfun-color.svg" alt="StepFun" class="model-avatar">
-                </div>
-                
-                <div class="nav-item" data-label="Arcee" data-model="arcee" title="Technical analysis">
-                    <img src="/static/icons/arcee-color.svg" alt="Arcee" class="model-avatar">
-                </div>
-            </nav>
-            
-            <div style="margin-top: auto;">
-                <div class="nav-item nav-utility" data-label="Settings">
+            </div>
+
+            <!-- Footer -->
+            <div class="sidebar-footer">
+                <button class="footer-item">
                     <i class="ri-settings-3-line"></i>
-                </div>
+                    <span>Settings</span>
+                </button>
             </div>
         </aside>
 
-        <!-- Main Chat Space -->
-        <main class="chat-space">
-            <div class="chat-card">
-                <header class="chat-header">
-                    <div class="user-meta">
-                        <h2>
-                            <span class="status-dot"></span>
-                            <span class="title-text">CHAT HX V01</span>
-                        </h2>
-                        <p class="powered-by">
-                            <span>Powered by</span>
-                            <span class="brand-highlight">Multiple AI Models</span>
-                        </p>
-                    </div>
-                    <div class="header-actions">
-                        <button class="action-btn" id="new-chat-btn">
-                            <i class="ri-add-line"></i>
-                            <span>New Chat</span>
-                        </button>
-                    </div>
-                </header>
+        <!-- Main Chat -->
+        <main class="chat-main">
 
-                <div class="message-canvas" id="chat-messages">
-                    <div class="welcome-message">
-                        <div class="welcome-icon">
-                            <span class="brackets">{ }</span>
+            <!-- Top bar (mobile + model indicator) -->
+            <header class="chat-topbar">
+                <div class="topbar-left">
+                    <button class="icon-btn topbar-menu-btn" id="sidebar-toggle">
+                        <i class="ri-menu-line"></i>
+                    </button>
+                    
+                    <!-- Model Dropdown -->
+                    <div class="model-dropdown" id="model-dropdown">
+                        <button class="model-dropdown-trigger" id="model-dropdown-trigger">
+                            <img src="/static/icons/meta-color.svg" alt="" id="topbar-model-icon" class="topbar-model-icon">
+                            <span id="topbar-model-label">Groq Llama 3.3</span>
+                            <i class="ri-arrow-down-s-line dropdown-arrow"></i>
+                        </button>
+                        <div class="model-dropdown-menu" id="model-dropdown-menu">
+                            <div class="dropdown-option active" data-model="groq" data-label="Groq Llama 3.3" data-icon="/static/icons/meta-color.svg">
+                                <img src="/static/icons/meta-color.svg" alt="Groq" class="dropdown-option-icon">
+                                <span class="dropdown-option-label">Groq Llama 3.3</span>
+                                <span class="dropdown-option-tag">Fast</span>
+                            </div>
+                            <div class="dropdown-option" data-model="openrouter" data-label="Claude 3.5 Haiku" data-icon="/static/icons/claude-color.svg">
+                                <img src="/static/icons/claude-color.svg" alt="Claude" class="dropdown-option-icon">
+                                <span class="dropdown-option-label">Claude Haiku</span>
+                                <span class="dropdown-option-tag">Design</span>
+                            </div>
+                            <div class="dropdown-option" data-model="gemini" data-label="Gemini Pro" data-icon="/static/icons/gemini-color.svg">
+                                <img src="/static/icons/gemini-color.svg" alt="Gemini" class="dropdown-option-icon">
+                                <span class="dropdown-option-label">Gemini Pro</span>
+                                <span class="dropdown-option-tag">Versatile</span>
+                            </div>
+                            <div class="dropdown-option" data-model="stepfun" data-label="StepFun" data-icon="/static/icons/stepfun-color.svg">
+                                <img src="/static/icons/stepfun-color.svg" alt="StepFun" class="dropdown-option-icon">
+                                <span class="dropdown-option-label">StepFun</span>
+                                <span class="dropdown-option-tag">Productivity</span>
+                            </div>
+                            <div class="dropdown-option" data-model="arcee" data-label="Arcee" data-icon="/static/icons/arcee-color.svg">
+                                <img src="/static/icons/arcee-color.svg" alt="Arcee" class="dropdown-option-icon">
+                                <span class="dropdown-option-label">Arcee</span>
+                                <span class="dropdown-option-tag">Technical</span>
+                            </div>
                         </div>
-                        <h2>Welcome to <span class="gradient-text">CHAT HX</span></h2>
-                        <p>Your intelligent conversation companion for coding and design.</p>
-                        <div class="quick-actions">
-                            <button class="quick-action-btn" data-prompt="Help me build a responsive navbar with Tailwind CSS">
-                                <i class="ri-layout-line"></i>
-                                <span>Build UI component</span>
-                            </button>
-                            <button class="quick-action-btn" data-prompt="Explain the difference between React hooks and class components">
-                                <i class="ri-code-line"></i>
-                                <span>Explain code concept</span>
-                            </button>
-                            <button class="quick-action-btn" data-prompt="Design principles for a modern dashboard">
-                                <i class="ri-palette-line"></i>
-                                <span>Design advice</span>
-                            </button>
-                        </div>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <button class="new-chat-btn-top" id="new-chat-btn-top">
+                        <i class="ri-add-line"></i>
+                        <span>New chat</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Viewport -->
+            <div class="messages-viewport" id="chat-messages">
+                <div class="welcome-screen">
+                    <div class="welcome-glyph">
+                        <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                            <circle cx="28" cy="28" r="27" stroke="#E5E7EB" stroke-width="1"/>
+                            <circle cx="28" cy="28" r="20" stroke="#D1D5DB" stroke-width="0.75" stroke-dasharray="3 4"/>
+                            <path d="M10 28C10 18.0589 18.0589 10 28 10C37.9411 10 46 18.0589 46 28" stroke="#374151" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M46 28C46 37.9411 37.9411 46 28 46C18.0589 46 10 37.9411 10 28" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 4"/>
+                            <circle cx="28" cy="28" r="5" fill="#111827"/>
+                            <circle cx="28" cy="28" r="2" fill="white"/>
+                        </svg>
+                    </div>
+                    <div class="welcome-copy">
+                        <h1>What can I help you with?</h1>
+                        <p>Select a model from the sidebar, then start your conversation.</p>
+                    </div>
+                    <div class="suggestion-grid">
+                        <button class="suggestion-card" data-prompt="Help me build a responsive navbar with Tailwind CSS">
+                            <i class="ri-layout-line"></i>
+                            <div>
+                                <strong>Build UI component</strong>
+                                <span>Responsive Tailwind navbar</span>
+                            </div>
+                        </button>
+                        <button class="suggestion-card" data-prompt="Explain the difference between React hooks and class components">
+                            <i class="ri-code-line"></i>
+                            <div>
+                                <strong>Explain code concepts</strong>
+                                <span>React hooks vs classes</span>
+                            </div>
+                        </button>
+                        <button class="suggestion-card" data-prompt="Design principles for a modern dashboard">
+                            <i class="ri-palette-line"></i>
+                            <div>
+                                <strong>Design advice</strong>
+                                <span>Modern dashboard principles</span>
+                            </div>
+                        </button>
+                        <button class="suggestion-card" data-prompt="Review this code for performance improvements">
+                            <i class="ri-speed-line"></i>
+                            <div>
+                                <strong>Code review</strong>
+                                <span>Performance improvements</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Input Area -->
-            <div class="omni-container">
-                <form id="chat-form">
-                    <div class="omni-pill">
-                        <div class="input-icon">
-                            <i class="ri-sparkling-2-line"></i>
+            <div class="input-area">
+                <div class="input-card">
+                    <form id="chat-form">
+                        <div class="input-body">
+                            <textarea 
+                                id="message-input" 
+                                placeholder="Message ChatHX..." 
+                                autocomplete="off"
+                                rows="1"
+                            ></textarea>
                         </div>
-                        <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
-                        <button type="submit" class="send-btn" id="send-btn">
-                            <i class="ri-arrow-up-line"></i>
-                        </button>
-                    </div>
-                </form>
+                        <div class="input-footer">
+                            <div class="input-model-chip" id="input-model-chip">
+                                <img src="/static/icons/meta-color.svg" alt="" id="chip-icon" class="chip-icon">
+                                <span id="chip-label">Groq Llama 3.3</span>
+                            </div>
+                            <button type="submit" class="send-btn" id="send-btn" disabled>
+                                <i class="ri-arrow-up-line"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <p class="input-notice">ChatHX can make mistakes. Consider checking important information.</p>
             </div>
-        </main>
 
-        <!-- Right Panel - Conversations List -->
-        <aside class="intel-panel">
-            <div class="intel-header">
-                <h3>History</h3>
-                <div class="header-actions-group">
-                    <button class="panel-action-btn" id="search-toggle-btn" title="Search conversations">
-                        <i class="ri-search-line"></i>
-                    </button>
-                    <button class="panel-action-btn delete-all-btn" id="delete-all-btn" title="Clear all history">
-                        <i class="ri-delete-bin-line"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="search-container" id="search-container" style="display: none;">
-                <div class="search-input-wrapper">
-                    <i class="ri-search-line search-icon"></i>
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="Search conversations..." 
-                        autocomplete="off"
-                    >
-                    <button class="clear-search-btn" id="clear-search-btn" style="display: none;">
-                        <i class="ri-close-line"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="data-stream" id="conversations-list">
-                <!-- Conversations will be loaded here -->
-            </div>
-        </aside>
+        </main>
     </div>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <script src="/static/script.js"></script>
 </body>
