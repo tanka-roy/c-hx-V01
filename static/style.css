@@ -485,19 +485,6 @@ body {
     flex-shrink: 0;
     font-size: 0.85rem;
     font-weight: 600;
-    border: 1px solid var(--glass-border);
-}
-
-.user-message .message-avatar {
-    background: linear-gradient(135deg, var(--aura-primary), var(--aura-tertiary));
-    color: var(--bg);
-    box-shadow: 0 0 20px rgba(0, 229, 160, 0.3);
-}
-
-.assistant-message .message-avatar {
-    background: linear-gradient(135deg, var(--aura-secondary), var(--aura-primary));
-    color: var(--bg);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
 }
 
 .message-bubble {
@@ -1269,4 +1256,56 @@ body {
 @keyframes fadeOut {
     from { opacity: 1; }
     to { opacity: 0; }
+}
+
+/* Model icon styling */
+.model-icon {
+    width: 1em;
+    height: 1em;
+    display: block;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+.message-avatar img.model-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Ensure proper alignment for SVG icons */
+.message-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Add subtle glow effect to model icons */
+.assistant-message .message-avatar img.model-icon {
+    filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.4));
+}
+
+/* Specific glow effects for different models */
+.nav-item[data-model="groq"] .model-avatar,
+.message-avatar img[src*="meta-color.svg"] {
+    filter: drop-shadow(0 0 6px rgba(0, 130, 251, 0.4));
+}
+
+.nav-item[data-model="openrouter"] .model-avatar,
+.message-avatar img[src*="claude-color.svg"] {
+    filter: drop-shadow(0 0 6px rgba(217, 119, 87, 0.4));
+}
+
+.nav-item[data-model="gemini"] .model-avatar,
+.message-avatar img[src*="gemini-color.svg"] {
+    filter: drop-shadow(0 0 6px rgba(49, 134, 255, 0.4));
+}
+
+.nav-item[data-model="stepfun"] .model-avatar,
+.message-avatar img[src*="stepfun-color.svg"] {
+    filter: drop-shadow(0 0 6px rgba(1, 169, 255, 0.4));
+}
+
+.nav-item[data-model="arcee"] .model-avatar,
+.message-avatar img[src*="arcee-color.svg"] {
+    filter: drop-shadow(0 0 6px rgba(0, 140, 140, 0.4));
 }

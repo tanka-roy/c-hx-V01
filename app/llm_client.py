@@ -7,17 +7,37 @@ from typing import List, Dict, Optional
 
 load_dotenv()
 
-# Available models with their providers
+# Available models with their providers and display info
 MODELS = {
     "groq": {
         "model": "llama-3.3-70b-versatile",
         "provider": "groq",
-        "display_name": "Groq Llama 3.3"
+        "display_name": "Groq Llama 3.3",
+        "icon": "meta-color.svg"  # Corresponds to the SVG file
     },
     "openrouter": {
         "model": "anthropic/claude-3.5-haiku",
         "provider": "openrouter",
-        "display_name": "Claude 3.5 Haiku"
+        "display_name": "Claude 3.5 Haiku",
+        "icon": "claude-color.svg"
+    },
+    "gemini": {
+        "model": "gemini-pro",
+        "provider": "google",
+        "display_name": "Gemini Pro",
+        "icon": "gemini-color.svg"
+    },
+    "stepfun": {
+        "model": "step-1-8k",
+        "provider": "stepfun",
+        "display_name": "StepFun",
+        "icon": "stepfun-color.svg"
+    },
+    "arcee": {
+        "model": "arcee-7b",
+        "provider": "arcee",
+        "display_name": "Arcee",
+        "icon": "arcee-color.svg"
     }
 }
 
@@ -30,6 +50,18 @@ API_CONFIGS = {
     "openrouter": {
         "base_url": "https://openrouter.ai/api/v1/chat/completions",
         "api_key_env": "OPENROUTER_API_KEY"
+    },
+    "google": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+        "api_key_env": "GOOGLE_API_KEY"
+    },
+    "stepfun": {
+        "base_url": "https://api.stepfun.com/v1/chat/completions",
+        "api_key_env": "STEPFUN_API_KEY"
+    },
+    "arcee": {
+        "base_url": "https://api.arcee.ai/v1/chat/completions",
+        "api_key_env": "ARCEE_API_KEY"
     }
 }
 
@@ -44,6 +76,11 @@ def get_model_config(model_key: str) -> Dict:
     """Get the full model config from the key"""
     return MODELS.get(model_key.lower(), MODELS["groq"])
 
+def get_model_icon(model_key: str) -> str:
+    """Get the icon filename for a model"""
+    config = get_model_config(model_key)
+    return config.get("icon", "meta-color.svg")  # Default fallback
+
 async def generate_response(
     prompt: str, 
     conversation_history: List[Dict] = None, 
@@ -51,7 +88,7 @@ async def generate_response(
 ) -> tuple[str, str]:
     """
     Generate response using the appropriate API based on model
-    Returns: (response_text, model_used)
+    Returns: (response_text, model_identifier)
     """
     try:
         # Get model configuration
@@ -75,8 +112,16 @@ async def generate_response(
         # Add system message with enhanced prompts for each model
         if provider == "groq":
             system_prompt = "You are an expert full-stack developer and coding assistant. You excel at writing clean, efficient code and explaining technical concepts clearly."
-        else:  # openrouter (Claude)
+        elif provider == "openrouter":  # Claude
             system_prompt = "You are an expert in modern UI/UX design and web development. You excel at creating beautiful, user-friendly interfaces and providing thoughtful design advice."
+        elif provider == "google":  # Gemini
+            system_prompt = "You are a versatile AI assistant with expertise in coding, problem-solving, and creative tasks. Provide helpful and accurate responses."
+        elif provider == "stepfun":
+            system_prompt = "You are a helpful AI assistant focused on productivity and task completion. Provide clear, actionable responses."
+        elif provider == "arcee":
+            system_prompt = "You are an AI assistant specialized in technical analysis and problem-solving. Provide precise, detailed responses."
+        else:
+            system_prompt = "You are a helpful AI assistant."
         
         messages.append({
             "role": "system",
@@ -112,10 +157,36 @@ async def generate_response(
             "Content-Type": "application/json"
         }
         
-        # OpenRouter requires additional headers
+        # Provider-specific modifications
         if provider == "openrouter":
-            headers["HTTP-Referer"] = "https://chat-hx.com"  # Optional but recommended
-            headers["X-Title"] = "Chat HX"  # Optional but recommended
+            headers["HTTP-Referer"] = "https://chat-hx.com"
+            headers["X-Title"] = "Chat HX"
+        elif provider == "google":
+            # Google Gemini uses different endpoint structure
+            url = f"{api_config['base_url']}?key={api_key}"
+            del headers["Authorization"]  # Google uses API key in query param
+            payload = {
+                "contents": [{
+                    "parts": [{"text": msg["content"]} for msg in messages]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 4096
+                }
+            }
+            
+            response = requests.post(url, headers=headers, json=payload, timeout=120)
+            
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    return f"API Error: {error_data.get('error', {}).get('message', response.text)}", model
+                except:
+                    return f"API Error: HTTP {response.status_code}", model
+            
+            result = response.json()
+            response_text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return response_text, model  # Return the model key, not the identifier
         
         print(f"[DEBUG] Calling {provider} API: {api_config['base_url']}")
         print(f"[DEBUG] Model: {model_identifier}")
@@ -149,7 +220,7 @@ async def generate_response(
         
         # Extract response text
         response_text = result["choices"][0]["message"]["content"].strip()
-        return response_text, model_identifier
+        return response_text, model  # Return the model key for consistency
         
     except requests.exceptions.Timeout:
         return "Error: Request timed out. Please try again.", model

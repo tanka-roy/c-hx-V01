@@ -9,6 +9,7 @@ class Message(BaseModel):
     role: str  # "user" or "assistant"
     content: str
     timestamp: datetime = None
+    model_used: Optional[str] = None  # Track which model generated this message
 
 class Conversation(BaseModel):
     id: Optional[str] = None

@@ -56,12 +56,13 @@ async def chat_endpoint(request: ChatRequest):
         }
         messages_collection.insert_one(user_message)
         
-        # Save AI response
+        # Save AI response with model information
         ai_message = {
             "conversation_id": conversation_id,
             "role": "assistant",
             "content": ai_response,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.utcnow(),
+            "model_used": model_used  # Store which model was used
         }
         message_result = messages_collection.insert_one(ai_message)
         message_id = str(message_result.inserted_id)

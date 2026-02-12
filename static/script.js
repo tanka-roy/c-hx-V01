@@ -97,6 +97,24 @@ class ChatApp {
     }
     
     /**
+     * Gets the appropriate icon for a model
+     * @param {string} modelKey - The model key (e.g., 'groq', 'openrouter')
+     * @returns {string} - HTML for the icon
+     */
+    getModelIcon(modelKey) {
+        const modelIcons = {
+            'groq': '/static/icons/meta-color.svg',
+            'openrouter': '/static/icons/claude-color.svg',
+            'gemini': '/static/icons/gemini-color.svg',
+            'stepfun': '/static/icons/stepfun-color.svg',
+            'arcee': '/static/icons/arcee-color.svg'
+        };
+        
+        const iconPath = modelIcons[modelKey] || modelIcons['groq'];
+        return `<img src="${iconPath}" alt="${modelKey}" class="model-icon" style="width: 1em; height: 1em;">`;
+    }
+    
+    /**
      * Checks if content should be collapsible
      * @param {string} content - The message content
      * @returns {boolean}
@@ -109,18 +127,28 @@ class ChatApp {
      * Creates an expandable message element
      * @param {string} content - The message content
      * @param {string} role - 'user' or 'assistant'
+     * @param {string} modelUsed - The model that generated the message (for assistant messages)
      * @returns {HTMLElement}
      */
-    createExpandableMessage(content, role) {
+    createExpandableMessage(content, role, modelUsed = null) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
         
         // Create avatar
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.innerHTML = role === 'user' ? 
-            '<i class="ri-user-line"></i>' : 
-            '<i class="ri-cpu-line"></i>';
+        
+        if (role === 'user') {
+            avatar.innerHTML = '<i class="ri-user-line"></i>';
+        } else {
+            // For assistant messages, use the model-specific icon
+            if (modelUsed) {
+                avatar.innerHTML = this.getModelIcon(modelUsed);
+            } else {
+                // Fallback to current model if not specified
+                avatar.innerHTML = this.getModelIcon(this.currentModel);
+            }
+        }
         
         // Create message bubble container
         const bubble = document.createElement('div');
@@ -244,7 +272,8 @@ class ChatApp {
             typingIndicator.remove();
             
             if (response.ok) {
-                this.addMessageToUI(data.response, 'assistant');
+                // Pass the model_used to display the correct icon
+                this.addMessageToUI(data.response, 'assistant', data.model_used);
                 this.currentConversationId = data.conversation_id;
                 this.loadConversations();
             } else {
@@ -259,13 +288,13 @@ class ChatApp {
         this.messageInput.focus();
     }
     
-    addMessageToUI(content, role) {
+    addMessageToUI(content, role, modelUsed = null) {
         const welcomeMessage = this.chatMessages.querySelector('.welcome-message');
         if (welcomeMessage) {
             welcomeMessage.remove();
         }
         
-        const messageElement = this.createExpandableMessage(content, role);
+        const messageElement = this.createExpandableMessage(content, role, modelUsed);
         this.chatMessages.appendChild(messageElement);
         
         this.scrollToBottom();
@@ -286,7 +315,8 @@ class ChatApp {
         
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.innerHTML = '<i class="ri-cpu-line"></i>';
+        // Use current model icon for typing indicator
+        avatar.innerHTML = this.getModelIcon(this.currentModel);
         
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
@@ -392,7 +422,8 @@ class ChatApp {
             this.chatMessages.innerHTML = '';
             
             messages.forEach(msg => {
-                this.addMessageToUI(msg.content, msg.role);
+                // Pass model_used if available for proper icon display
+                this.addMessageToUI(msg.content, msg.role, msg.model_used);
             });
             
             this.scrollToBottom();
